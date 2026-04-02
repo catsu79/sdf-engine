@@ -13,10 +13,6 @@ def coordinatePlane2D(xleft, xright, xstep, yleft, yright, ystep):
 def dist2DPoints(point1, point2):
     return ((point1[0]-point2[0])**2+(point1[1]-point2[1])**2)**0.5
 
-#dist of any point to origin given x array and y array
-def len2DVector(arrayX, arrayY):
-    return ((arrayX)**2+(arrayY)**2)**0.5
-
 #Circle SDF
 def circleSDF(center, radius, coordinatePlaneName):
     return(dist2DPoints(coordinatePlaneName, center) - radius)
@@ -24,7 +20,7 @@ def circleSDF(center, radius, coordinatePlaneName):
 #Rectangle SDF
 def rectSDF(center, halfDimList, coordinatePlaneName):
    d = [np.subtract(np.abs(np.subtract(coordinatePlaneName[0], center[0])), halfDimList[0]), np.subtract(np.abs(np.subtract(coordinatePlaneName[1], center[1])), halfDimList[1])]
-   return(len2DVector(np.maximum(d[0],0), np.maximum(d[1], 0)) + np.minimum(np.maximum(d[0], d[1]), 0))
+   return dist2DPoints([np.maximum(d[0],0), np.maximum(d[1], 0)], [0,0]) + np.minimum(np.maximum(d[0], d[1]), 0)
 
 def updateCanvas(coordinatePlaneName):
     pixelColorArray = []
@@ -54,12 +50,12 @@ def initTk():
     root.mainloop()
 
 def renderSDF(root, sdfArray):
-    colorString = updateCanvas(coordinatePlaneName)
+    colorString = updateCanvas(sdfArray)
     
     canvas = tk.Canvas(root, width=1000, height=800)
     canvas.pack()
     
-    img = tk.PhotoImage(width=len(coordinatePlaneName[0]), height=len(coordinatePlaneName))
+    img = tk.PhotoImage(width=len(sdfArray[0]), height=len(sdfArray))
     img.put(colorString)
     img = img.zoom(1)
     

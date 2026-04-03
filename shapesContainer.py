@@ -22,7 +22,7 @@ def rectSDF(center, halfDimList, coordinatePlaneName):
    d = [np.subtract(np.abs(np.subtract(coordinatePlaneName[0], center[0])), halfDimList[0]), np.subtract(np.abs(np.subtract(coordinatePlaneName[1], center[1])), halfDimList[1])]
    return dist2DPoints([np.maximum(d[0],0), np.maximum(d[1], 0)], [0,0]) + np.minimum(np.maximum(d[0], d[1]), 0)
 
-def updateCanvas(coordinatePlaneName):
+def sdfToPixelColor(coordinatePlaneName):
     pixelColorArray = []
     for y in reversed(range(0, len(coordinatePlaneName))):
         pixelColorListx = []
@@ -38,13 +38,6 @@ def updateCanvas(coordinatePlaneName):
                 return None
         pixelColorArray.append('{' + ' '.join(pixelColorListx) + '}')
     return ' '.join(pixelColorArray)
-
-def initTk():
-    root = tk.Tk()
-    root.title('Canvas Demo')
-
-    canvas = tk.Canvas(root, width=1800, height=1000, bg='white')
-    canvas.pack(anchor=tk.CENTER, expand=True)
 
 
     root.mainloop()

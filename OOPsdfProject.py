@@ -1,4 +1,4 @@
-#importing libraries
+#importing public python libraries
 import numpy as np
 import math
 import tkinter as tk
@@ -8,7 +8,7 @@ from tkinter import ttk
 def dist2DPoints(point1, point2):
     return ((point1[0]-point2[0])**2+(point1[1]-point2[1])**2)**0.5
 
-#represents the instructions for the composite shape in the plane (Scene and Grid are married)
+#represents the instructions for the composite shape (Scene and Grid are married: one instance of each is paired to the other)
 #add adds primitives and their operation to the composite creation instructions
 #remove removes a primitive with its operation
 #compute recursively puts NumPy methods to make the instructions executable for the Signed Distance Field (SDF) composite
@@ -156,7 +156,7 @@ class App():
                 self.scene.add(Rectangle(name, center, dims), self.opVar.get())
             self.renderSDF(self.scene.compute())
         except Exception as error:
-            print(str(error) + ' ERROR when adding shape')
+            print(str(error) + ' error when adding shape')
 
     def sdfToPixelColor(self, sdfArray):
         pixelColorArray = []
@@ -183,7 +183,7 @@ class App():
         self.canvas.create_image(0, 0, anchor='nw', image=img)
         self.canvas.img = img
 
-#represents the SDF itself (Scene and Grid are married)
+#represents the SDF itself (Scene and Grid are married: see line 11)
 #create creates the SDF's base state of a meshgrid with x and y values held to perform initial distance calculations
 class Grid():
     def __init__(self, xLeft, xRight, xStep, yLower, yUpper, yStep):
@@ -205,7 +205,7 @@ class Grid():
         return self.meshgrid
 
 #a parent class representing all shapes
-#evaluate returns an error if someone tries to evaluate an ambiguous shape
+#evaluate raises an error if someone tries to evaluate an ambiguous shape
 class Shape():
     def __init__(self):
         pass
@@ -239,9 +239,9 @@ class Rectangle(Shape):
              np.subtract(np.abs(np.subtract(grid[1], self.center[1])), self.dims[1]/2)]
         return dist2DPoints([np.maximum(d[0],0), np.maximum(d[1], 0)], [0,0]) + np.minimum(np.maximum(d[0], d[1]), 0)
 
-#main code: stores the Grid, creates the arrays, creates the instruction list, launches the window, and persists it
+#main code: stores the Grid, creates the arrays, creates the Scene, launches and configues the window, and persists it
 sketch1 = Grid(-500, 500, 1, -500, 500, 1)
 sketch1.create()
-sketch1_scene = Scene(sketch1.meshgrid)
-test1 = App([1000,1000], sketch1_scene)
+sketch1Scene = Scene(sketch1.meshgrid)
+test1 = App([1000,1000], sketch1Scene)
 test1.root.mainloop()

@@ -61,6 +61,15 @@ class App():
                              font=('Arial', 14, 'bold'))
         self.style.configure('Sidebar.TButton', padding=5)
         self.style.configure('Canvas.TFrame', background='#1a1a1a')
+        self.style.configure('SceneHeader.TFrame', background='#353535')
+        self.style.configure('SceneHeader.TLabel', background='#353535', foreground='white',
+                             font=('Arial', 10))
+        self.style.configure('SceneDetail.TFrame', background='#303030')
+        self.style.configure('SceneDetail.TLabel', background='#303030', foreground='#cccccc',
+                             font=('Arial', 9))
+        self.style.configure('Delete.TButton', padding=2)
+        self.style.configure('SubHeader.TLabel', background='#2b2b2b', foreground='white',
+                             font=('Arial', 12, 'bold'))
 
         #The following GUI code is written by Claude AI Opus 4.6 by Anthropic
         # sidebar on the left, canvas on the right
@@ -103,6 +112,97 @@ class App():
 
         # dict storing references to parameter Entry widgets
         self.paramEntries = {}
+
+        # ---- COLORS SECTION ----
+        ttk.Separator(self.sidebarFrame, orient='horizontal').pack(fill='x', pady=10, padx=10)
+        ttk.Label(self.sidebarFrame, text='Colors', style='SubHeader.TLabel').pack(pady=(0, 5))
+        self.colorEntries = {}
+        for colorLabel, colorDefault in [('Interior', '#4488ff'), ('Boundary', '#000000'), ('Exterior', '#ffa500')]:
+            row = ttk.Frame(self.sidebarFrame, style='Sidebar.TFrame')
+            row.pack(fill='x', padx=15, pady=1)
+            ttk.Label(row, text=colorLabel, style='Sidebar.TLabel', width=8).pack(side='left')
+            entry = ttk.Entry(row, width=9)
+            entry.insert(0, colorDefault)
+            entry.pack(side='left', padx=(5, 0))
+            self.colorEntries[colorLabel] = entry
+
+        # ---- SCENE LIST SECTION ----
+        ttk.Separator(self.sidebarFrame, orient='horizontal').pack(fill='x', pady=10, padx=10)
+        ttk.Label(self.sidebarFrame, text='Scene List', style='SubHeader.TLabel').pack(pady=(0, 5))
+        #scrollable frame pattern: canvas + inner frame + scrollbar
+        self.sceneListContainer = ttk.Frame(self.sidebarFrame, style='Sidebar.TFrame')
+        self.sceneListContainer.pack(fill='both', expand=True, padx=5, pady=(0, 10))
+        self.sceneListCanvas = tk.Canvas(self.sceneListContainer, bg='#2b2b2b',
+                                         highlightthickness=0, width=240)
+        self.sceneListScrollbar = ttk.Scrollbar(self.sceneListContainer, orient='vertical',
+                                                 command=self.sceneListCanvas.yview)
+        self.sceneListFrame = ttk.Frame(self.sceneListCanvas, style='Sidebar.TFrame')
+        self.sceneListFrame.bind('<Configure>',
+            lambda e: self.sceneListCanvas.configure(scrollregion=self.sceneListCanvas.bbox('all')))
+        self.sceneListCanvas.create_window((0, 0), window=self.sceneListFrame, anchor='nw')
+        self.sceneListCanvas.configure(yscrollcommand=self.sceneListScrollbar.set)
+        self.sceneListCanvas.pack(side='left', fill='both', expand=True)
+        self.sceneListScrollbar.pack(side='right', fill='y')
+        #track which entries are expanded (index -> bool)
+        self.expandedEntries = {}
+
+    #rebuilds the entire scene list UI from self.scene.entries
+    def _refreshSceneList(self):
+        for widget in self.sceneListFrame.winfo_children():
+            widget.destroy()
+        self.expandedEntries = {}
+        for i, (shape, op) in enumerate(self.scene.entries):
+            entryFrame = ttk.Frame(self.sceneListFrame, style='Sidebar.TFrame')
+            entryFrame.pack(fill='x', pady=1)
+            #clickable header row
+            header = ttk.Frame(entryFrame, style='SceneHeader.TFrame')
+            header.pack(fill='x')
+            arrow = ttk.Label(header, text='\u25b6', style='SceneHeader.TLabel', width=2)
+            arrow.pack(side='left', padx=(5, 0))
+            nameLabel = ttk.Label(header, text=shape.name + ' (' + op + ')',
+                                  style='SceneHeader.TLabel')
+            nameLabel.pack(side='left', padx=5)
+            deleteBtn = ttk.Button(header, text='\u2715', width=3, style='Delete.TButton',
+                                   command=lambda idx=i: self._removeEntry(idx))
+            deleteBtn.pack(side='right', padx=5)
+            #collapsible detail panel with shape parameters (hidden by default)
+            detail = ttk.Frame(entryFrame, style='SceneDetail.TFrame')
+            typeName = type(shape).__name__
+            ttk.Label(detail, text='Type: ' + typeName,
+                      style='SceneDetail.TLabel').pack(anchor='w', padx=15)
+            for paramLabel, paramValue in shape.describe():
+                ttk.Label(detail, text=paramLabel + ': ' + str(paramValue),
+                          style='SceneDetail.TLabel').pack(anchor='w', padx=15)
+            #bind click on header elements to toggle detail visibility
+            self.expandedEntries[i] = False
+            def makeToggle(idx, arrowWidget, detailWidget):
+                def toggle(event=None):
+                    self._toggleEntry(idx, arrowWidget, detailWidget)
+                return toggle
+            toggleCmd = makeToggle(i, arrow, detail)
+            header.bind('<Button-1>', toggleCmd)
+            arrow.bind('<Button-1>', toggleCmd)
+            nameLabel.bind('<Button-1>', toggleCmd)
+
+    #expands or collapses a scene list entry's detail panel
+    def _toggleEntry(self, index, arrow, detail):
+        if self.expandedEntries.get(index, False):
+            detail.pack_forget()
+            arrow.configure(text='\u25b6')
+            self.expandedEntries[index] = False
+        else:
+            detail.pack(fill='x')
+            arrow.configure(text='\u25bc')
+            self.expandedEntries[index] = True
+
+    #removes a scene entry by index, refreshes the list, and re-renders
+    def _removeEntry(self, index):
+        self.scene.remove(index)
+        self._refreshSceneList()
+        if len(self.scene.entries) > 0:
+            self.renderSDF(self.scene.compute())
+        else:
+            self.canvas.delete('all')
 
     #helper to build a labeled row of two coordinate entries with parentheses
     def _makePointRow(self, parent, label, keyX, keyY):
@@ -248,21 +348,25 @@ class App():
                 he = float(self.paramEntries['he'].get())
                 thickness = float(self.paramEntries['th'].get())
                 self.scene.add(Hyperbola(name, center, k, he, thickness), self.opVar.get())
+            self._refreshSceneList()
             self.renderSDF(self.scene.compute())
         except Exception as error:
             print(str(error) + ' error when adding shape')
 
     def sdfToPixelColor(self, sdfArray):
+        interiorColor = self.colorEntries['Interior'].get()
+        boundaryColor = self.colorEntries['Boundary'].get()
+        exteriorColor = self.colorEntries['Exterior'].get()
         pixelColorArray = []
         for y in reversed(range(0, len(sdfArray))):
             pixelColorListx = []
             for x in range(0, len(sdfArray[y])):
                 if (sdfArray[y][x] < -3):
-                    pixelColorListx.append('#4488ff')
+                    pixelColorListx.append(interiorColor)
                 elif (sdfArray[y][x] >= -3 and sdfArray[y][x] <= 0):
-                    pixelColorListx.append('#000000')
+                    pixelColorListx.append(boundaryColor)
                 elif (sdfArray[y][x] > 0):
-                    pixelColorListx.append('#ffa500')
+                    pixelColorListx.append(exteriorColor)
                 else:
                     print('FATAL ERROR')
                     return None
@@ -307,6 +411,9 @@ class Shape():
     def evaluate(self, grid):
         raise NotImplementedError
 
+    def describe(self):
+        raise NotImplementedError
+
 #represents circle objects
 #evaluate computes the SDF of the circle
 class Circle(Shape):
@@ -314,6 +421,9 @@ class Circle(Shape):
         self.name = name
         self.center = center
         self.radius = radius
+
+    def describe(self):
+        return [('Center', self.center), ('Radius', self.radius)]
 
     #The logic for the following function was derived from https://iquilezles.org/articles/distfunctions2d/
     def evaluate(self, grid):
@@ -326,6 +436,9 @@ class Rectangle(Shape):
         self.name = name
         self.center = center
         self.dims = dims
+
+    def describe(self):
+        return [('Center', self.center), ('Dims', self.dims)]
 
     #The logic for the following function was derived from https://iquilezles.org/articles/distfunctions2d/
     def evaluate(self, grid):
@@ -341,6 +454,9 @@ class LineSegment(Shape):
         self.pointA = pointA
         self.pointB = pointB
         self.thickness = thickness
+
+    def describe(self):
+        return [('Point A', self.pointA), ('Point B', self.pointB), ('Thickness', self.thickness)]
 
     #The logic for the following function was derived from https://iquilezles.org/articles/distfunctions2d/
     def evaluate(self, grid):
@@ -361,6 +477,9 @@ class Triangle(Shape):
         self.pointA = pointA
         self.pointB = pointB
         self.pointC = pointC
+
+    def describe(self):
+        return [('Point A', self.pointA), ('Point B', self.pointB), ('Point C', self.pointC)]
 
     #The logic for the following function was derived from https://iquilezles.org/articles/distfunctions2d/
     def evaluate(self, grid):
@@ -412,6 +531,10 @@ class Arc(Shape):
         self.endAngle = endAngle
         self.thickness = thickness
 
+    def describe(self):
+        return [('Center', self.center), ('Radius', self.radius),
+                ('Start', self.startAngle), ('End', self.endAngle), ('Thickness', self.thickness)]
+
     #The logic for the following function was derived from https://iquilezles.org/articles/distfunctions2d/
     def evaluate(self, grid):
         #translate to center
@@ -441,6 +564,9 @@ class Polygon(Shape):
     def __init__(self, name, vertices):
         self.name = name
         self.vertices = vertices
+
+    def describe(self):
+        return [('Vertices', len(self.vertices))]
 
     #The logic for the following function was derived from https://iquilezles.org/articles/distfunctions2d/
     def evaluate(self, grid):
@@ -481,6 +607,9 @@ class Ellipse(Shape):
         self.center = center
         self.semiA = semiA
         self.semiB = semiB
+
+    def describe(self):
+        return [('Center', self.center), ('Semi-A', self.semiA), ('Semi-B', self.semiB)]
 
     #The logic for the following function was derived from https://iquilezles.org/articles/distfunctions2d/
     #and https://iquilezles.org/articles/ellipsedist/
@@ -546,6 +675,10 @@ class Parabola(Shape):
         self.width = width
         self.thickness = thickness
 
+    def describe(self):
+        return [('a', self.a), ('b', self.b), ('c', self.c),
+                ('Width', self.width), ('Thickness', self.thickness)]
+
     #The logic for the following function was derived from https://iquilezles.org/articles/distfunctions2d/
     def evaluate(self, grid):
         #vertex of y = ax^2 + bx + c
@@ -582,6 +715,10 @@ class Hyperbola(Shape):
         self.k = k
         self.he = he
         self.thickness = thickness
+
+    def describe(self):
+        return [('Center', self.center), ('k', self.k),
+                ('Height', self.he), ('Thickness', self.thickness)]
 
     #The logic for the following function was derived from https://iquilezles.org/articles/distfunctions2d/
     def evaluate(self, grid):

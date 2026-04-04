@@ -605,8 +605,7 @@ class Hyperbola(Shape):
         #distance to closest point on hyperbola curve
         d = np.sqrt((rpx - t)**2 + (rpy - k / np.where(np.abs(t) < 1e-10, 1e-10, t))**2)
         #sign: inside when xy > k (in rotated coords)
-        signed = np.where(rpx * rpy < k, d, -d)
-        return signed - self.thickness
+        return d - self.thickness
 
 #main code: stores the Grid, creates the arrays, creates the Scene, launches and configures the window, and persists it
 sketch1 = Grid(-500, 500, 1, -500, 500, 1)

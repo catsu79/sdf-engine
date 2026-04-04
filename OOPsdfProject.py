@@ -52,20 +52,29 @@ class App():
                            'Triangle': 0, 'Arc': 0, 'Polygon': 0, 
                            'Ellipse': 0, 'Parabola': 0, 'Hyperbola': 0}
 
+        #ttk dark theme setup
+        self.style = ttk.Style()
+        self.style.theme_use('clam')
+        self.style.configure('Sidebar.TFrame', background='#2b2b2b')
+        self.style.configure('Sidebar.TLabel', background='#2b2b2b', foreground='white')
+        self.style.configure('Header.TLabel', background='#2b2b2b', foreground='white',
+                             font=('Arial', 14, 'bold'))
+        self.style.configure('Sidebar.TButton', padding=5)
+        self.style.configure('Canvas.TFrame', background='#1a1a1a')
+
         #The following GUI code is written by Claude AI Opus 4.6 by Anthropic
         # sidebar on the left, canvas on the right
-        self.sidebarFrame = tk.Frame(self.root, width=260, bg='#2b2b2b')
+        self.sidebarFrame = ttk.Frame(self.root, width=260, style='Sidebar.TFrame')
         self.sidebarFrame.pack(side='left', fill='y')
         self.sidebarFrame.pack_propagate(False)
-        self.canvasFrame = tk.Frame(self.root)
+        self.canvasFrame = ttk.Frame(self.root, style='Canvas.TFrame')
         self.canvasFrame.pack(side='right', fill='both', expand=True)
 
         self.canvas = tk.Canvas(self.canvasFrame, width=canvasDims[0], height=canvasDims[1], bg='#1a1a1a')
         self.canvas.pack()
 
         # ---- ADD SHAPE SECTION ----
-        tk.Label(self.sidebarFrame, text='Add Shape', bg='#2b2b2b', fg='white',
-                 font=('Arial', 14, 'bold')).pack(pady=(20, 10))
+        ttk.Label(self.sidebarFrame, text='Add Shape', style='Header.TLabel').pack(pady=(20, 10))
 
         # shape type dropdown
         self.shapeVar = tk.StringVar(value='Select...')
@@ -78,40 +87,40 @@ class App():
         self.shapeVar.trace_add('write', self.onShapeSelected)
 
         # container for dynamically generated parameter fields
-        self.paramFrame = tk.Frame(self.sidebarFrame, bg='#2b2b2b')
+        self.paramFrame = ttk.Frame(self.sidebarFrame, style='Sidebar.TFrame')
         self.paramFrame.pack(pady=5, padx=15, fill='x')
 
         # boolean operation dropdown
-        tk.Label(self.sidebarFrame, text='Operation', bg='#2b2b2b', fg='white').pack(pady=(10, 2))
+        ttk.Label(self.sidebarFrame, text='Operation', style='Sidebar.TLabel').pack(pady=(10, 2))
         self.opVar = tk.StringVar(value='union')
         self.opDropdown = ttk.Combobox(self.sidebarFrame, textvariable=self.opVar,
                                        values=['union', 'subtraction', 'intersection'], state='readonly', width=20)
         self.opDropdown.pack(pady=5)
 
         # add shape button
-        tk.Button(self.sidebarFrame, text='Add to Scene', width=20,
-                  command=self.onAddShape).pack(pady=20)
+        ttk.Button(self.sidebarFrame, text='Add to Scene', width=20,
+                   style='Sidebar.TButton', command=self.onAddShape).pack(pady=20)
 
         # dict storing references to parameter Entry widgets
         self.paramEntries = {}
 
     #helper to build a labeled row of two coordinate entries with parentheses
     def _makePointRow(self, parent, label, keyX, keyY):
-        tk.Label(parent, text=label, bg='#2b2b2b', fg='white').pack(anchor='w', pady=(8, 0))
-        row = tk.Frame(parent, bg='#2b2b2b')
+        ttk.Label(parent, text=label, style='Sidebar.TLabel').pack(anchor='w', pady=(8, 0))
+        row = ttk.Frame(parent, style='Sidebar.TFrame')
         row.pack(fill='x', pady=2)
-        tk.Label(row, text='(', bg='#2b2b2b', fg='white').pack(side='left')
-        self.paramEntries[keyX] = tk.Entry(row, width=6)
+        ttk.Label(row, text='(', style='Sidebar.TLabel').pack(side='left')
+        self.paramEntries[keyX] = ttk.Entry(row, width=6)
         self.paramEntries[keyX].pack(side='left')
-        tk.Label(row, text=',', bg='#2b2b2b', fg='white').pack(side='left')
-        self.paramEntries[keyY] = tk.Entry(row, width=6)
+        ttk.Label(row, text=',', style='Sidebar.TLabel').pack(side='left')
+        self.paramEntries[keyY] = ttk.Entry(row, width=6)
         self.paramEntries[keyY].pack(side='left')
-        tk.Label(row, text=')', bg='#2b2b2b', fg='white').pack(side='left')
+        ttk.Label(row, text=')', style='Sidebar.TLabel').pack(side='left')
 
     #helper to build a labeled single value entry
     def _makeSingleEntry(self, parent, label, key):
-        tk.Label(parent, text=label, bg='#2b2b2b', fg='white').pack(anchor='w', pady=(8, 0))
-        self.paramEntries[key] = tk.Entry(parent, width=6)
+        ttk.Label(parent, text=label, style='Sidebar.TLabel').pack(anchor='w', pady=(8, 0))
+        self.paramEntries[key] = ttk.Entry(parent, width=6)
         self.paramEntries[key].pack(anchor='w', pady=2)
 
     def onShapeSelected(self, *args):
@@ -122,8 +131,8 @@ class App():
         shape = self.shapeVar.get()
         self.shapeCounts[shape] = self.shapeCounts.get(shape, 0) + 1
         defaultName = shape.lower().replace(' ', '') + str(self.shapeCounts[shape])
-        tk.Label(self.paramFrame, text='Name', bg='#2b2b2b', fg='white').pack(anchor='w')
-        self.paramEntries['name'] = tk.Entry(self.paramFrame, width=15)
+        ttk.Label(self.paramFrame, text='Name', style='Sidebar.TLabel').pack(anchor='w')
+        self.paramEntries['name'] = ttk.Entry(self.paramFrame, width=15)
         self.paramEntries['name'].insert(0, defaultName)
         self.paramEntries['name'].pack(anchor='w', pady=2)
 
@@ -133,16 +142,16 @@ class App():
 
         elif shape == 'Rectangle':
             self._makePointRow(self.paramFrame, 'Center', 'cx', 'cy')
-            tk.Label(self.paramFrame, text='Dimensions (W, H)', bg='#2b2b2b', fg='white').pack(anchor='w', pady=(8, 0))
-            dimsRow = tk.Frame(self.paramFrame, bg='#2b2b2b')
+            ttk.Label(self.paramFrame, text='Dimensions (W, H)', style='Sidebar.TLabel').pack(anchor='w', pady=(8, 0))
+            dimsRow = ttk.Frame(self.paramFrame, style='Sidebar.TFrame')
             dimsRow.pack(fill='x', pady=2)
-            tk.Label(dimsRow, text='(', bg='#2b2b2b', fg='white').pack(side='left')
-            self.paramEntries['w'] = tk.Entry(dimsRow, width=6)
+            ttk.Label(dimsRow, text='(', style='Sidebar.TLabel').pack(side='left')
+            self.paramEntries['w'] = ttk.Entry(dimsRow, width=6)
             self.paramEntries['w'].pack(side='left')
-            tk.Label(dimsRow, text=',', bg='#2b2b2b', fg='white').pack(side='left')
-            self.paramEntries['h'] = tk.Entry(dimsRow, width=6)
+            ttk.Label(dimsRow, text=',', style='Sidebar.TLabel').pack(side='left')
+            self.paramEntries['h'] = ttk.Entry(dimsRow, width=6)
             self.paramEntries['h'].pack(side='left')
-            tk.Label(dimsRow, text=')', bg='#2b2b2b', fg='white').pack(side='left')
+            ttk.Label(dimsRow, text=')', style='Sidebar.TLabel').pack(side='left')
 
         elif shape == 'Line Segment':
             self._makePointRow(self.paramFrame, 'Point A', 'ax', 'ay')
@@ -162,8 +171,8 @@ class App():
             self._makeSingleEntry(self.paramFrame, 'Thickness', 'th')
 
         elif shape == 'Polygon':
-            tk.Label(self.paramFrame, text='Vertices (x,y x,y ...)', bg='#2b2b2b', fg='white').pack(anchor='w', pady=(8, 0))
-            self.paramEntries['verts'] = tk.Entry(self.paramFrame, width=20)
+            ttk.Label(self.paramFrame, text='Vertices (x,y x,y ...)', style='Sidebar.TLabel').pack(anchor='w', pady=(8, 0))
+            self.paramEntries['verts'] = ttk.Entry(self.paramFrame, width=20)
             self.paramEntries['verts'].pack(anchor='w', pady=2)
 
         elif shape == 'Ellipse':

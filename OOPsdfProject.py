@@ -8,7 +8,10 @@ from tkinter import ttk
 def dist2DPoints(point1, point2):
     return ((point1[0]-point2[0])**2+(point1[1]-point2[1])**2)**0.5
 
-#represents the instructions for the composite shape in the plane
+#represents the instructions for the composite shape in the plane (Scene and Grid are married)
+#add adds primitives and their operation to the composite creation instructions
+#remove removes a primitive with its operation
+#compute recursively puts NumPy methods to make the instructions executable for the Signed Distance Field (SDF) composite
 class Scene():
     def __init__(self, grid):
         self.entries = []
@@ -32,9 +35,13 @@ class Scene():
         'subtraction': np.maximum(shapeID1, -1 * shapeID2), 
         'intersection': np.maximum(shapeID1, shapeID2)}
         return opToNumPy[self.entries[i][1]]
-        
-
-
+    
+#represents the TKinter window and all GUI things are processed here
+#most GUI configuration is done by AI due to high volume of TKinter widget configuration code
+#onShapeSelected handles widget popups and mapping when selecting and inputting shape and shape parameters (by AI)
+#onAddShape pulls widget values and adds the new shape as a tuple of shape_instance and operation to the Scene() instuctions
+#sdfToPixelColor walks the SDF to convert values into hex colors for TKinter's .put method to show user viewable PhotoImage
+#renderSDF renders the converted SDF as a TKinter canvas widget in the window
 class App():
     def __init__(self, canvasDims, scene):
         self.root = tk.Tk()
@@ -42,7 +49,7 @@ class App():
         self.scene = scene
         self.shapeCounts = {'Circle': 0, 'Rectangle': 0}
 
-        #The following code is written by Claude AI Opus 4.6 by Anthropic
+        #The following lines 53 - 142 are written by Claude AI Opus 4.6 by Anthropic
         # sidebar on the left, canvas on the right
         self.sidebarFrame = tk.Frame(self.root, width=260, bg='#2b2b2b')
         self.sidebarFrame.pack(side='left', fill='y')
@@ -133,7 +140,7 @@ class App():
             self.paramEntries['h'] = tk.Entry(dimsRow, width=6)
             self.paramEntries['h'].pack(side='left')
             tk.Label(dimsRow, text=')', bg='#2b2b2b', fg='white').pack(side='left')
-    #This is the end of the code written by Claude AI Opus 4.6 by Anthropic
+    #This is the end of the lines 53 - 142 written by Claude AI Opus 4.6 by Anthropic
 
     def onAddShape(self):
         try:
@@ -148,19 +155,19 @@ class App():
                 dims = [float(self.paramEntries['w'].get()), float(self.paramEntries['h'].get())]        
                 self.scene.add(Rectangle(name, center, dims), self.opVar.get())
             self.renderSDF(self.scene.compute())
-        except Exception as e:
-            print(e)
+        except Exception as error:
+            print(str(error) + ' ERROR when adding shape')
 
     def sdfToPixelColor(self, sdfArray):
         pixelColorArray = []
         for y in reversed(range(0, len(sdfArray))):
             pixelColorListx = []
             for x in range(0, len(sdfArray[y])):
-                if (sdfArray[y][x] < -2):
+                if (sdfArray[y][x] < -3):
                     pixelColorListx.append('#4488ff')
-                elif (sdfArray[y][x] >= -2 and sdfArray[y][x] <= 2):
+                elif (sdfArray[y][x] >= -3 and sdfArray[y][x] <= 0):
                     pixelColorListx.append('#000000')
-                elif (sdfArray[y][x] > 2):
+                elif (sdfArray[y][x] > 0):
                     pixelColorListx.append('#ffa500')
                 else:
                     print('FATAL ERROR')
@@ -176,6 +183,8 @@ class App():
         self.canvas.create_image(0, 0, anchor='nw', image=img)
         self.canvas.img = img
 
+#represents the SDF itself (Scene and Grid are married)
+#create creates the SDF's base state of a meshgrid with x and y values held to perform initial distance calculations
 class Grid():
     def __init__(self, xLeft, xRight, xStep, yLower, yUpper, yStep):
         self.xLeft = xLeft
@@ -185,7 +194,6 @@ class Grid():
         self.yUpper = yUpper
         self.yStep = yStep
         self.meshgrid = None
-        self.name = ''
         self.scene = None
 
     def create(self):
@@ -196,6 +204,8 @@ class Grid():
         self.scene = Scene(self.meshgrid)
         return self.meshgrid
 
+#a parent class representing all shapes
+#evaluate returns an error if someone tries to evaluate an ambiguous shape
 class Shape():
     def __init__(self):
         pass
@@ -203,6 +213,8 @@ class Shape():
     def evaluate(self, grid):
         raise NotImplementedError
 
+#represents circle objects
+#evaluate computes the SDF of the circle
 class Circle(Shape):
     def __init__(self, name, center, radius):
         self.name = name
@@ -213,6 +225,8 @@ class Circle(Shape):
     def evaluate(self, grid):
         return(dist2DPoints(grid, self.center) - self.radius)
 
+#represents rectangle objects
+#evaluate computes the SDF of the rectangle
 class Rectangle(Shape):
     def __init__(self, name, center, dims):
         self.name = name
@@ -225,6 +239,7 @@ class Rectangle(Shape):
              np.subtract(np.abs(np.subtract(grid[1], self.center[1])), self.dims[1]/2)]
         return dist2DPoints([np.maximum(d[0],0), np.maximum(d[1], 0)], [0,0]) + np.minimum(np.maximum(d[0], d[1]), 0)
 
+#main code: stores the Grid, creates the arrays, creates the instruction list, launches the window, and persists it
 sketch1 = Grid(-500, 500, 1, -500, 500, 1)
 sketch1.create()
 sketch1_scene = Scene(sketch1.meshgrid)

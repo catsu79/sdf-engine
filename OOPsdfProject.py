@@ -239,7 +239,7 @@ class Rectangle(Shape):
              np.subtract(np.abs(np.subtract(grid[1], self.center[1])), self.dims[1]/2)]
         return dist2DPoints([np.maximum(d[0],0), np.maximum(d[1], 0)], [0,0]) + np.minimum(np.maximum(d[0], d[1]), 0)
 
-#main code: stores the Grid, creates the arrays, creates the Scene, launches and configues the window, and persists it
+#main code: stores the Grid, creates the arrays, creates the Scene, launches and configures the window, and persists it
 sketch1 = Grid(-500, 500, 1, -500, 500, 1)
 sketch1.create()
 sketch1Scene = Scene(sketch1.meshgrid)
